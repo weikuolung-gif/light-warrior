@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>光明勇士｜多人連線打擊魔鬼</title>
+<style>
+:root{font-family:system-ui,"Microsoft JhengHei",sans-serif;color:#f8f4e8;background:#0b1329}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 50% 0%,#273e65 0%,#101a32 50%,#090e1d 100%);min-height:100vh}
+main{max-width:950px;margin:auto;padding:18px 15px 35px}.head{text-align:center}.eyebrow{color:#f5c66b;letter-spacing:4px;font-size:12px}.head h1{font-size:clamp(30px,6vw,54px);margin:5px 0;color:#ffe1a0;text-shadow:0 3px 20px #f7a52a55}.head p{color:#c2d2e7;margin:5px 0 15px}
+.hud{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.stat{background:#1d2d4a;border:1px solid #405779;border-radius:15px;text-align:center;padding:10px}.stat label{display:block;color:#c1d2e8;font-size:13px}.stat strong{font-size:clamp(23px,5vw,36px);color:#ffe3a5;font-variant-numeric:tabular-nums}
+.arena{position:relative;border:3px solid #b68b43;border-radius:22px;background:#17253e;box-shadow:0 12px 35px #0008;overflow:hidden}
+canvas{display:block;width:100%;touch-action:manipulation;cursor:crosshair}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#07101ecb;padding:15px;text-align:center}
+.overlay.hidden{display:none}.panel{max-width:490px}.panel h2{font-size:32px;color:#ffdb94;margin:0 0 12px}.panel p{line-height:1.8;color:#e1e8f6}
+button,select,input{font:inherit;border-radius:12px;padding:12px 18px;border:1px solid #b99555}button{background:linear-gradient(#ffe2a0,#e4a848);color:#342311;font-weight:800;cursor:pointer}button:hover{filter:brightness(1.08)}button:disabled{opacity:.5;cursor:default}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin:15px 0}
+select,input{background:#233757;color:white}input{border:1px solid #b99555;border-radius:10px;padding:11px;max-width:220px;width:100%}.leaderboard{background:#182844;border:1px solid #516783;border-radius:16px;padding:15px;margin-top:14px}.leaderboard h2{text-align:center;color:#ffdb94;margin:0 0 10px}.leaderboard table{width:100%;border-collapse:collapse;text-align:center}.leaderboard th,.leaderboard td{padding:9px 5px;border-bottom:1px solid #344962}.leaderboard th{color:#ffe1a0}.leaderboard .mine{background:#4e653b77}.namebox{margin:14px 0}.namebox label{display:block;margin-bottom:7px;color:#ffe1a0}.help{color:#bac9df;font-size:14px;line-height:1.8;text-align:center}.legend{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin:8px 0}.legend span{border-radius:12px;padding:7px 12px;background:#223655}
+footer{text-align:center;color:#8498b4;font-size:12px;margin-top:20px}
+</style></head><body><main>
+<header class="head"><div class="eyebrow">LIGHT WARRIOR · INTERACTIVE GAME</div><h1>⚔️ 光明勇士</h1><p>看見魔鬼頭上的亮光，迅速擊打！小心不要誤傷天使與人們。</p></header>
+<section class="hud"><div class="stat"><label>目前得分</label><strong id="score">0</strong></div><div class="stat"><label>剩餘時間</label><strong id="time">45</strong></div><div class="stat"><label>連續命中</label><strong id="combo">0</strong></div></section>
+<div class="arena"><canvas id="game" width="900" height="550" aria-label="九宮格打擊魔鬼遊戲"></canvas>
+<div id="overlay" class="overlay"><div class="panel"><h2 id="overlayTitle">準備好挑戰了嗎？</h2><p id="overlayText">魔鬼頭上亮起紅光時，點擊牠就能得分！<br>天使與人們是需要保護的對象，誤擊會扣分。</p><div class="namebox"><label for="playerName">請輸入玩家姓名（最多 12 字）</label><input id="playerName" maxlength="12" placeholder="例如：小明" autocomplete="nickname"></div><p id="nameError" style="color:#ffb5ad;display:none;margin:4px">請先輸入姓名</p><button id="start">▶ 開始遊戲</button></div></div></div>
+<div class="controls"><label for="duration">遊戲時間</label><select id="duration"><option value="30">30 秒</option><option value="45" selected>45 秒</option><option value="60">60 秒</option><option value="90">90 秒</option></select><button id="mute" type="button">🔊 音效開啟</button><button id="restart" type="button">↻ 重新開始</button></div>
+<div class="legend"><span>😈 魔鬼 +10 分</span><span>😇 天使 −15 分</span><span>🙂 人物 −10 分</span><span>✨ 連擊額外加分</span></div>
+<section class="leaderboard"><h2>🏆 全場雲端排行榜 TOP 10</h2><p id="cloudStatus" style="text-align:center;color:#b9d7ef">正在檢查雲端連線…</p><table><thead><tr><th>名次</th><th>玩家</th><th>得分</th><th>時間</th></tr></thead><tbody id="rankRows"></tbody></table><p style="text-align:center;color:#aebed4;font-size:12px">全場排名每 5 秒自動更新。請先由主辦方設定 Supabase 雲端資料庫。</p></section><p class="help"><a href="leaderboard.html" target="_blank" style="color:#ffe1a0">📺 開啟投影專用全場排行榜</a></p><p class="help">操作：電腦用滑鼠點擊；手機和平板直接觸碰。魔鬼亮燈才算有效命中，漏掉目標會中斷連擊。<br>此版本為瀏覽器互動遊戲，適合投影與觸控螢幕。</p>
+<footer>光明勇士 · HTML5 Canvas 單檔版 · 無須安裝</footer></main>
+<script src="config.js"></script><script src="cloud.js"></script><script>
+(()=>{'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),$=id=>document.getElementById(id);
+const W=900,H=550,holes=[],cols=3,rows=3;
+for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)holes.push({x:165+c*285,y:135+r*164,r:69,actor:null});
+let player='',currentDuration=45,score=0,combo=0,time=45,playing=false,muted=false,audio=null,last=0,spawnClock=0,nextSpawn=720,gameEnd=0,particles=[],floating=[],flash=0,animation=0;
+function sound(freq=440,dur=.1,type='sine',vol=.06){if(muted)return;try{audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();let o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);g.gain.setValueAtTime(vol,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+dur)}catch(e){}}
+function tune(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>sound(f,.16,'triangle',.045),i*120))}
+function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+function drawBackground(t){
+const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#263f66');grad.addColorStop(1,'#0d1930');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+for(let i=0;i<45;i++){let x=(i*139+43)%W,y=(i*83+27)%H;ctx.fillStyle=`rgba(255,226,151,${.13+.13*Math.sin(t/900+i)})`;ctx.beginPath();ctx.arc(x,y,1.5,0,7);ctx.fill()}
+ctx.textAlign='center';ctx.font='bold 24px system-ui';ctx.fillStyle='#e5c47f';ctx.fillText('✨ 擊退黑暗 · 守護光明 ✨',W/2,46);
+for(const h of holes){
+ctx.save();ctx.shadowColor='#040917';ctx.shadowBlur=18;ctx.fillStyle='#0a1326';ctx.beginPath();ctx.ellipse(h.x,h.y+36,94,40,0,0,Math.PI*2);ctx.fill();ctx.restore();
+ctx.fillStyle='#38506d';ctx.beginPath();ctx.ellipse(h.x,h.y+44,91,19,0,0,7);ctx.fill();
+if(h.actor){let a=h.actor,lit=a.type==='devil',pulse=.55+.45*Math.sin(t/100);
+if(lit){ctx.save();ctx.shadowColor='#ff4c3e';ctx.shadowBlur=30*pulse;ctx.fillStyle='#ff6252';ctx.beginPath();ctx.arc(h.x,h.y-72,12+4*pulse,0,7);ctx.fill();ctx.restore()}
+else{ctx.fillStyle=a.type==='angel'?'#b8f7fb':'#b2d4f4';ctx.beginPath();ctx.arc(h.x,h.y-72,7,0,7);ctx.fill()}
+let rise=Math.min(1,(t-a.born)/150,(a.until-t)/120);rise=Math.max(0,rise);
+ctx.save();ctx.beginPath();ctx.rect(h.x-83,h.y-102,166,139);ctx.clip();
+ctx.font='94px "Apple Color Emoji","Segoe UI Emoji",system-ui';ctx.textAlign='center';ctx.fillText(a.type==='devil'?'😈':a.type==='angel'?'😇':'🙂',h.x,h.y+20+(1-rise)*110);ctx.restore();
+ctx.font='bold 14px system-ui';ctx.fillStyle=lit?'#ffd3c8':'#e1f4ff';ctx.fillText(lit?'● 目標亮燈':'請勿擊打',h.x,h.y+80);
+}
+ctx.strokeStyle='#9b7847';ctx.lineWidth=6;ctx.beginPath();ctx.ellipse(h.x,h.y+37,95,32,0,0,Math.PI);ctx.stroke();
+}
+if(flash>t){ctx.fillStyle='#fff2aa14';ctx.fillRect(0,0,W,H)}
+}
+function drawEffects(t){floating=floating.filter(f=>t<f.until);for(const f of floating){let p=(f.until-t)/850;ctx.globalAlpha=Math.min(1,p*2);ctx.fillStyle=f.color;ctx.font='bold 27px system-ui';ctx.textAlign='center';ctx.fillText(f.text,f.x,f.y-(1-p)*75);ctx.globalAlpha=1}
+particles=particles.filter(p=>t<p.until);for(const p of particles){let k=(p.until-t)/500;ctx.globalAlpha=k;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x+(1-k)*p.vx,p.y+(1-k)*p.vy,4*k,0,7);ctx.fill();ctx.globalAlpha=1}}
+function spawn(t){const free=holes.filter(h=>!h.actor);if(!free.length)return;const h=free[Math.floor(Math.random()*free.length)],n=Math.random(),type=n<.7?'devil':n<.85?'angel':'person';h.actor={type,born:t,until:t+Math.max(650,1500-(45-time)*9)};if(type==='devil')sound(420,.07,'triangle',.025)}
+function update(t){if(!last)last=t;let dt=Math.min(80,t-last);last=t;
+if(playing){time=Math.max(0,Math.ceil((gameEnd-t)/1000));$('time').textContent=time;
+if(t>=gameEnd){end();}else{spawnClock+=dt;if(spawnClock>=nextSpawn){spawnClock=0;nextSpawn=580+Math.random()*420;spawn(t)}
+for(const h of holes)if(h.actor&&t>=h.actor.until){if(h.actor.type==='devil')combo=0;h.actor=null;$('combo').textContent=combo}}}
+drawBackground(t);drawEffects(t);animation=requestAnimationFrame(update)}
+function hit(x,y){if(!playing)return;let t=performance.now();const h=holes.find(h=>Math.hypot(x-h.x,(y-12)-h.y)<85);if(!h||!h.actor)return;const a=h.actor;if(t-a.born<100)return;
+let delta=0,color='#ffd67b';if(a.type==='devil'){combo++;delta=10+(combo>=3?Math.min(10,Math.floor(combo/3)*2):0);sound(700,.12,'square',.04);setTimeout(()=>sound(950,.08,'triangle',.035),65);flash=t+80}
+else{combo=0;delta=a.type==='angel'?-15:-10;color='#ff8c99';sound(180,.25,'sawtooth',.04)}
+score=Math.max(0,score+delta);$('score').textContent=score;$('combo').textContent=combo;floating.push({x:h.x,y:h.y-40,text:(delta>0?'+':'')+delta,color,until:t+850});for(let i=0;i<12;i++){let theta=i*Math.PI/6;particles.push({x:h.x,y:h.y-20,vx:Math.cos(theta)*90,vy:Math.sin(theta)*80,color,until:t+500})}h.actor=null}
+canvas.addEventListener('pointerdown',e=>{const b=canvas.getBoundingClientRect();hit((e.clientX-b.left)*W/b.width,(e.clientY-b.top)*H/b.height)});
+let cloudRanks=[];
+function escapeHTML(x){return String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderRanks(){const ranks=cloudRanks.slice(0,10);$('rankRows').innerHTML=ranks.length?ranks.map((r,i)=>`<tr><td>${i+1}</td><td>${escapeHTML(r.player_name)}</td><td>${r.score}</td><td>${r.duration} 秒</td></tr>`).join(''):'<tr><td colspan="4">尚無雲端成績</td></tr>'}
+async function refreshRanks(){try{cloudRanks=await LWCloud.top(10);renderRanks();$('cloudStatus').textContent='🟢 雲端已連線 · 場次：'+LWCloud.eventId()}catch(e){$('cloudStatus').textContent='🔴 '+e.message}}
+async function saveRank(){try{await LWCloud.submit(player,score,currentDuration);await refreshRanks();$('cloudStatus').textContent='🟢 成績已上傳雲端'}catch(e){$('cloudStatus').textContent='🔴 成績上傳失敗：'+e.message;alert('成績未成功上傳，請確認網路與雲端設定。\n'+e.message)}}
+function start(){const name=$('playerName').value.trim();if(!name){$('nameError').style.display='block';$('playerName').focus();return}$('nameError').style.display='none';player=name;currentDuration=+$('duration').value;score=0;combo=0;time=+$('duration').value;holes.forEach(h=>h.actor=null);particles=[];floating=[];spawnClock=0;nextSpawn=300;$('score').textContent=0;$('combo').textContent=0;$('time').textContent=time;$('overlay').classList.add('hidden');$('duration').disabled=true;playing=true;gameEnd=performance.now()+time*1000;tune()}
+function end(){playing=false;void saveRank();holes.forEach(h=>h.actor=null);$('duration').disabled=false;$('overlayTitle').textContent='🏆 挑戰結束！';$('overlayText').innerHTML=`${escapeHTML(player)}，本次獲得 <strong style="font-size:36px;color:#ffe2a0">${score}</strong> 分！<br>${score>=200?'你是光明守護高手！':score>=80?'表現很棒，再接再厲！':'繼續練習，守護光明！'}`;$('start').textContent='▶ 再玩一次';$('overlay').classList.remove('hidden');tune()}
+$('start').onclick=start;$('restart').onclick=()=>{if(playing)end();start()};$('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'🔇 音效關閉':'🔊 音效開啟'};refreshRanks();setInterval(refreshRanks,5000);animation=requestAnimationFrame(update);
+})();
+</script></body></html>
