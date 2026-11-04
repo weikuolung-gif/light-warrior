@@ -1,0 +1,1 @@
+window.LW_CONFIG = { supabaseUrl: "https://edmoiwnmnigeqnrzxhon.supabase.co" };
